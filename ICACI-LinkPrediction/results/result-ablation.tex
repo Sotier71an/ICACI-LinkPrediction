@@ -1,0 +1,37 @@
+\begin{table*}[!hbtp]
+\centering
+\begin{threeparttable}
+\small
+\setlength{\tabcolsep}{12pt} % Control column spacing
+\renewcommand{\arraystretch}{1.0} % Control row spacing
+\caption{Performance Comparison of Different GNN Encoders on Two Datasets.}
+\begin{tabular}{@{}l*{10}{c}@{}}
+\toprule[1.0pt]
+\multirow{2}{*}{\textbf{Method}} 
+& \multicolumn{5}{c}{\textbf{SCHOLAT}} 
+& \multicolumn{5}{c}{\textbf{YST}} \\
+\cmidrule(lr){2-6} \cmidrule(lr){7-11}
+& \textbf{AUC} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} & \textbf{Acc.} 
+& \textbf{AUC} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} & \textbf{Acc.} \\
+\midrule
+SAG
+& 0.90 & 0.89 & 0.85 & 0.87 & 0.87 
+& 0.68 & 0.75 & 0.53 & 0.62 & 0.68 \\
+GIN 
+& 0.87 & 0.89 & 0.80 & 0.84 & 0.85 
+& 0.64 & 0.72 & 0.43 & 0.54 & 0.63 \\
+\midrule
+\textbf{\textbf{Ours}}
+& \textbf{0.96} & \textbf{0.89} & \textbf{0.97} & \textbf{0.93} & \textbf{0.93} 
+& \textbf{0.85} & \textbf{0.81} & \textbf{0.82} & \textbf{0.82} & \textbf{0.81} \\
+\bottomrule[1.0pt]
+\end{tabular}
+\begin{tablenotes}
+  \small
+  \item[1] Prec.: Precision; Rec.: Recall; Acc.: Accuracy.
+  \item[2] All results use identical hyperparameters, data processing, and training pipelines.
+\end{tablenotes}
+\end{threeparttable}
+\label{tab:ablation}
+\end{table*}
+

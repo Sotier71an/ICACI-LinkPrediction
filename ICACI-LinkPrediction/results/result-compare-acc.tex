@@ -1,0 +1,37 @@
+\begin{table}[!hbtp]
+    \centering
+    \begin{threeparttable} % 使用 threeparttable 环境包裹整个表格
+    \small
+    \setlength{\tabcolsep}{8pt} % 增加列间距使表格更宽
+    \renewcommand{\arraystretch}{1} % 增加行高
+    \caption{Accuracy Comparison of Different Methods on Two Datasets}
+    \begin{tabular}{@{}c l c *{2}{c}@{}} % 使用单列并居中对齐
+    \toprule[1.0pt]
+    \textbf{Category} & \textbf{Model} & & \textbf{SCHOLAT} & \textbf{YST} \\
+    \midrule
+    \midrule
+    \multirow{4}{*}{\textbf{G}}
+    & GIN       & & 0.91 & 0.52 \\ 
+    & GAT       & & 0.93 & 0.55 \\ 
+    & GAT v2    & & 0.93 & 0.54 \\
+    & LAGCN     & & 0.87 & 0.57 \\ 
+    \midrule
+    \midrule
+    \multirow{3}{*}{\textbf{HG}} 
+    & SELAR     & & 0.88 & 0.59 \\ 
+    & MAGNN     & & 0.89 & 0.58 \\ 
+    & MAHGA     & & 0.85 & 0.60 \\
+    \midrule
+    \midrule
+    \multirow{1}{*}{\textbf{Ours}} 
+    & \textbf{BGNN}$^*$   & & \textbf{0.93} & \textbf{0.81} \\
+    \toprule[1.0pt]
+    \end{tabular}
+    \begin{tablenotes}
+      \small
+      \item[1] G: Graph Neural Network Methods; HG: Heterogeneous Graph Methods
+      \item[2] $^*$: Our proposed method
+    \end{tablenotes}
+    \end{threeparttable}
+    \label{tab:accuracy_results}
+\end{table}

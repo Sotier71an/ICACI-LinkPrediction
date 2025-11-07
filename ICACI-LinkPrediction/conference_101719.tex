@@ -1,0 +1,350 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\usepackage{algorithm}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Bayesian Graph Neural Networks for Interpretable Link Prediction \\
+% {\footnotesize \textsuperscript{*}Note: Sub-titles are not captured in Xplore and
+% should not be used}
+\thanks{This work was supported by the Guangdong Regional Joint Foundation Key
+Project 2022B1515120076. (Corresponding author: Wei-Neng Chen)}
+}
+
+\author{
+\IEEEauthorblockN{Jia-Ran Gao}
+\IEEEauthorblockA{\textit{School of Computer and Communication Engineering} \\
+\textit{University of Science and Technology Beijing}\\
+Beijing, China \\
+u202241904@xs.ustb.edu.cn}
+\and
+\IEEEauthorblockN{Xiao-Tian Chen}
+\IEEEauthorblockA{\textit{School of Computer and Communication Engineering} \\
+\textit{University of Science and Technology Beijing}\\
+Beijing, China \\
+u202241926@xs.ustb.edu.cn}
+\and
+\IEEEauthorblockN{Jia-Xuan Shen}
+\IEEEauthorblockA{\textit{School of Computer and Communication Engineering} \\
+\textit{University of Science and Technology Beijing}\\
+Beijing, China \\
+u202241891@xs.ustb.edu.cn}
+\and
+\IEEEauthorblockN{Feng-Feng Wei}
+\IEEEauthorblockA{\textit{School of Computer Science and Engineering} \\
+\textit{South China University of Technology}\\
+Guangzhou, China \\
+fengfengwei@scut.edu.cn}
+\and
+\IEEEauthorblockN{Wei-Neng Chen*}
+\IEEEauthorblockA{\textit{School of Computer Science and Engineering} \\
+\textit{South China University of Technology}\\
+Guangzhou, China \\
+cschenwn@scut.edu.cn}
+
+}
+
+\maketitle
+
+\begin{abstract}
+Link prediction is a fundamental problem in complex networks, with applications ranging from social media to bioinformatics. Existing methods often rely solely on either topological heuristics or latent variable models that neglect rich node attribute information. In this paper, we propose a Bayesian Graph Neural Network (BGNN) framework that simultaneously extracts deep node embeddings and leverages probabilistic graphical models to address these shortcomings. Specifically, our method first employs a multi-layer GNN to capture both local and global structural features. It then extracts non-topological features through attribute encoding. These complementary features are fused into a unified representation and fed into a Bayesian Network. The network computes the posterior probability of edge existence using Bayes’ Theorem. This integration not only enhances prediction accuracy by leveraging both structural and attribute information, but also provides interpretable insights by quantifying the contribution of each feature to the final decision. Extensive experiments on standard datasets demonstrate that BGNN outperforms state-of-the-art methods both qualitatively and quantitatively. For instance, BGNN achieves an accuracy of 93\% on the SCHOLAT dataset and 81\% on the YST dataset, with significant improvements in precision, recall, and AUC.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Link Prediction, Graph Neural Networks, Bayesian Inference, Interpretability
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Link prediction has emerged as a cornerstone problem in the analysis of complex networks. It has drawn significant attention due to broad applications in various domains such as social networks\cite{Bhat2010Scalable}, recommender systems\cite{Lakshmi2021Link}, and bioinformatics networks\cite{Ott2022LinkExplorer}. In today’s data-driven era, accurately forecasting potential connections not yet explicitly present in a graph is of paramount importance. This task not only relies on uncovering valuable patterns from the network topology but also leverages rich node attribute information to reveal hidden relationships. For instance, in social networks\cite{Holubová2021Link}, the network topology captures explicit user interactions. Integrating additional node attributes, such as age, interests, and behavioural patterns, provides a more nuanced understanding of the underlying relational dynamics. The significance of link prediction extends beyond theoretical advancements. Its practical implications are substantial, contributing to enhanced accuracy in recommender systems and improved performance in critical applications like disease prediction.
+
+Various approaches have been proposed to tackle the link prediction problem, which can be broadly classified into heuristic-based methods, latent factor or block models, and probabilistic graphical models. Heuristic-based approaches primarily utilize simple topological metrics, such as Common Neighbors \cite{Ahmad2020Missing, Yang2016Predicting}, Jaccard Similarity \cite{Sathre2022Edge-Connected}, and Resource Allocation \cite{Wang2023Global}. However, these methods typically disregard valuable node attribute information. As a result, they potentially overlook critical nuances inherent in real-world networks. Latent factor methods, including Latent Variable Models \cite{Wang2017Relational} and Stochastic Block Models \cite{Nair2023An, paul1983stochasticblockmodels}, provide a more global view of network structure by modeling hidden relationships among nodes. Despite this advantage, they often struggle to accurately capture local structural details essential for precise link prediction in complex and heterogeneous networks. Probabilistic Graphical Models (PGMs) \cite{Getoor2003Learning} offer a clear, interpretable framework by explicitly modeling conditional dependencies among variables. Although PGMs are highly valuable for understanding and explaining underlying factors contributing to link formation, they frequently face scalability challenges. These challenges become particularly evident when integrating rich, deep embeddings generated by modern neural network techniques.
+
+In recent years, deep learning models such as Convolutional Neural Networks (CNNs)\cite{9737511} and Recurrent Neural Networks (RNNs) have demonstrated remarkable success in handling structured data like images and sequential data like text. CNNs excel at capturing spatial hierarchies through convolutional operations, while RNNs effectively process sequential dependencies via recurrent mechanisms. Building on these advances, Graph Neural Networks (GNNs)\cite{Ruiz2020Graph} have emerged as a powerful approach for modeling complex graph-structured data. By leveraging both topological information and node attributes, as demonstrated in multimodal fusion strategies\cite{10506974}, GNNs can learn high-quality node embeddings, substantially enhancing link prediction performance. Despite their predictive accuracy, GNNs face criticism for their "black-box" nature, lacking transparency in elucidating how specific structural or attribute features influence predictions. This limitation is particularly problematic in high-stakes applications like disease prediction, where understanding the decision-making process is crucial. Consequently, this paper focuses on addressing two key issues: (1) effectively integrating topology and node attributes, and (2) improving interpretability.
+
+Specifically, most existing methods rely purely on topological information, making it difficult to capture heterogeneous relationships or incorporate valuable node attribute data when inferring potential links. Consequently, pure structural features alone often prove insufficient in complex real-world scenarios. On the other hand, although GNNs have achieved remarkable performance in link prediction, the underlying decision-making process remains largely opaque. This "black box" nature hinders intuitive understanding and explanation of model outputs, which is particularly crucial in practical applications where reliable and interpretable predictions are required.
+
+To address these challenges, this paper proposes a novel multi-stage link prediction framework. The framework leverages GNNs to extract deep node embeddings and uses probabilistic graphical models such as Bayesian networks to infer topological structures and attribute features jointly. Specifically, we extract high-dimensional node embedding vectors via GNNs and combine node attribute similarity and local statistical features to perform joint inference through a Bayesian network. Ultimately, we compute the posterior probability of edge existence.
+
+
+
+The contributions of this paper are summarised as follows:
+
+\begin{enumerate}
+    \item We propose a multi-stage framework that first extracts deep node embeddings via multi-layer GNNs. These embeddings effectively capture both local and global graph structures. Subsequently, embeddings are fused with statistical and node attribute features for joint inference through a Bayesian network. This process enables comprehensive modeling of edge existence probability.
+
+    \item We introduce a unified strategy for integrating topology and node attributes into the prediction pipeline. Specifically, our framework seamlessly combines node attribute similarity and local statistical signals alongside topological information. This holistic integration enriches the feature representation and enhances predictive robustness, addressing the limitations of methods relying solely on structural information.
+
+    \item We conduct extensive experiments on five standard datasets. The experimental results demonstrate that the proposed model consistently outperforms baseline methods, confirming its effectiveness and practical applicability.
+\end{enumerate}
+
+
+
+The remainder of this paper is organised as follows. Section~\ref{sec:related_work} reviews the existing research on link prediction, focusing on traditional methods, GNN-based approaches, and probabilistic graphical models. Section~\ref{sec:proposed_method} describes our proposed Bayesian Graph Neural Network (BGNN) framework, including topological feature extraction, non-topological feature extraction, and the fusion mechanism. Section~\ref{sec:experiments} presents the experimental setup, results, and corresponding analyses. Finally, Section~\ref{sec:conclusion} summarises the main findings of this work and outlines possible future research directions.
+
+
+\section{Related Work}
+\label{sec:related_work}
+
+\subsection{Traditional Link Prediction Methods}
+
+Early link prediction methods primarily relied on the topological structure of graphs for inference, such as heuristic methods like Common Neighbors\cite{Ahmad2020Missing}, Jaccard Similarity\cite{Sathre2022Edge-Connected}, and Resource Allocation\cite{Wang2023Global}. These methods mainly focused on the structural information of networks but ignored the attribute information of nodes. In addition, there are some statistical models, such as Latent Variable Models\cite{Wang2017Relational} and Block Models\cite{Nair2023An}, which capture the latent relationships between nodes by modeling the network structure. However, these traditional methods often have certain limitations and cannot effectively handle complex real-world networks that contain rich non-structural information.
+
+\subsection{Graph Neural Networks}
+
+In the task of link prediction, GNN methods have made significant progress \cite{Lazar2023Graph}. For link prediction in dynamic graphs, the GR model \cite{10026343} effectively extracts spatio-temporal features and successfully addresses the issue of node count discrepancies across different time snapshots by stacking Graph Convolutional Networks (GCN)\cite{1609.02907}. In addition, the Graph Isomorphism Network (GIN) \cite{xu2019powerfulgraphneuralnetworks} effectively preserves the structural information of the graph by modeling its isomorphism, while the Graph Attention Network (GAT) \cite{velivckovic2017graph} utilizes attention mechanisms to learn relationships between nodes, which helps improve the accuracy of link prediction. 
+In addition, recent approaches have leveraged hypergraph neural networks \cite{shangada, shang2024mshypermultiscalehypergraphtransformer} to capture higher-order relationships among nodes.
+These methods play a crucial role in preserving the graph structure and capturing the complex relationships between nodes.
+
+\subsection{Probabilistic Graphical Models}
+
+The application of Probabilistic Graphical Models (PGMs) in link prediction is relatively rare\cite{2107.01339, Getoor2003Learning}. However, with the increasing demand for interpretability, more and more work is focusing on how to integrate PGMs into the link prediction framework\cite{7123483,4470256}. In particular, Bayesian Networks\cite{Puga2015bayes}, as a typical PGM, can effectively describe the probabilistic dependencies between variables, providing interpretable analysis of the posterior probabilities of link existence. However, traditional PGM methods have often failed to fully integrate deep embeddings or local statistical features of nodes, limiting their performance in practical applications.
+
+Unlike previous models that focus solely on either deep GNN embeddings or traditional statistical features, our approach uniquely integrates both. By combining node attribute similarity and local statistics with multi-layer GNN representations through a Bayesian Network, our model not only enhances prediction accuracy but also offers clear interpretability, revealing how each feature contributes to the final prediction.
+
+\begin{figure*}[!tb]
+    \centering
+    \makebox[\textwidth]{\includegraphics[width=\textwidth]{figures/framework.drawio.pdf}}  
+    \caption{The block diagram of our proposed network}
+    \label{fig:model1}
+\end{figure*}  
+
+\section{Problem Formulation}
+
+Link prediction aims to predict the existence of an edge between two nodes in a graph $G = (V, E)$, where $V$ is the set of nodes and $E$ is the set of edges. Given the graph $G$, each node $v \in V$ has an associated feature vector $\mathbf{x}_v$, which may include both topological and non-topological attributes. The task is to predict whether an edge exists between a pair of nodes $(u, v) \in V \times V$, where $u \neq v$.
+
+Formally, for a node pair $(u, v)$, the goal is to predict the probability that an edge exists between these nodes, i.e., to estimate $P(y_{uv} = 1 \mid \mathbf{x}_u, \mathbf{x}_v)$, where $y_{uv}$ is a binary random variable that indicates the presence of an edge between $u$ and $v$:
+
+\begin{equation}
+y_{uv} = \begin{cases}
+1, & \text{if there is an edge between } u \text{ and } v, \\
+0, & \text{otherwise}.
+\end{cases}
+\end{equation}
+
+Here, $\mathbf{x}_u$ and $\mathbf{x}_v$ are the feature vectors of nodes $u$ and $v$, respectively. These feature vectors are derived from both topological information (graph structure) and non-topological information (node attributes). The challenge lies in efficiently combining these two types of information and leveraging them for accurate link prediction.
+
+
+\section{Proposed BGNN}
+\label{sec:proposed_method}
+
+
+In this section, we describe the proposed approach for link prediction, which combines multi-layer GNN embeddings with Bayesian Network inference. 
+% Our method consists of two main stages: (1) integration of topological and non-topological features, and (2) probabilistic inference through a Bayesian Network for interpretability.
+
+% \subsubsection{Preliminaries}
+% For GNNs, let $G = (V, E)$ represent the graph, where $V$ is the set of nodes, and $E$ is the set of edges. For a given node $v \in V$, the GNN computes the node embedding $\mathbf{h}_v$ as follows:
+
+% \begin{equation}
+% \mathbf{h}_v^{(l)} = \text{AGGREGATE}\left(\left\{ \mathbf{h}_u^{(l-1)} : u \in \mathcal{N}(v) \right\}\right)
+% \end{equation}
+
+% where $\mathbf{h}_v^{(l)}$ is the node embedding at the $l$-th layer, and $\mathcal{N}(v)$ denotes the set of neighbors of node $v$. 
+% The function $\text{AGGREGATE}$ can vary, with popular choices being mean aggregation (in GraphSAGE) or attention-based aggregation (in GAT).
+
+% The final node embedding $\mathbf{h}_v^{(L)}$ is obtained after passing through $L$ layers, capturing multi-hop neighborhood information crucial for link prediction.
+
+% For Bayesian Networks, are probabilistic graphical models that represent the conditional dependencies between a set of variables. In the context of link prediction, we model the existence of an edge between two nodes $u$ and $v$ as a random variable $y_{uv}$, where:
+
+% \begin{equation}
+% y_{uv} = \begin{cases}
+% 1, & \text{if there is an edge between } u \text{ and } v \\
+% 0, & \text{otherwise}
+% \end{cases}
+% \end{equation}
+
+% We then model the conditional probability $P(y_{uv} \mid \mathbf{x}_u, \mathbf{x}_v)$, where $\mathbf{x}_u$ and $\mathbf{x}_v$ represent the feature vectors of nodes $u$ and $v$, respectively. These feature vectors are obtained through the fusion of topological and non-topological features.
+
+\subsection{Overview}
+The method consists of two main stages: first, the extraction of topological and non-topological features of the nodes, and then the fusion of these two types of features followed by link prediction. 
+
+The input data is a graph $G = (V, E)$, where each node $v \in V$ has an associated attribute vector $\mathbf{x}v$. The topological features are extracted using a multi-layer GNN, where the graph structure is captured by iteratively aggregating information from neighboring nodes, resulting in the node embedding vector $\mathbf{h}v^{(L)}$. The non-topological features are processed by transforming node attributes into feature vectors $\mathbf{x}v$. In the fusion module, the topological and non-topological feature vectors are combined into a single feature vector, which is then used by the link prediction module. This module uses a Bayesian Network model to predict the posterior probability of the existence of an edge between two nodes. In the Bayesian Network, the input fused feature vector $\mathbf{f}{uv}$ is used to compute the probability of an edge existing, $P(y{uv} = 1 \mid \mathbf{f}{uv})$, thereby performing link prediction and inference via Bayes’ Theorem. This probabilistic approach not only enhances interpretability by helping to understand which features influence the link prediction outcome, but also provides the potential for risk assessment and decision-making support through the quantification of uncertainty.
+
+\subsection{Topological Features Extraction Module}
+
+In this module, we use a multi-layer GNN to capture the topological features of the graph. Specifically, the GNN generates embeddings by aggregating information from neighboring nodes across multiple layers. The embedding of a node $v$ at layer $l$ is updated in two steps:
+
+First, we aggregate information from the neighboring nodes of $v$ at layer $l-1$:
+
+\begin{equation}
+\mathbf{h}_v^{(l-1)} = \text{AGGREGATE}\left(\left\{ \mathbf{h}_u^{(l-1)} : u \in \mathcal{N}(v) \right\}\right)
+\end{equation}
+
+Next, the aggregated information is passed through a learnable transformation, and the embedding is updated:
+
+\begin{equation}
+\mathbf{h}_v^{(l)} = \sigma\left(\mathbf{W}^{(l)} \cdot \mathbf{h}_v^{(l-1)} + \mathbf{b}^{(l)}\right)
+\end{equation}
+
+where $\mathbf{W}^{(l)}$ and $\mathbf{b}^{(l)}$ are learnable parameters at layer $l$, and $\sigma$ is the activation function (ReLU).
+
+After $L$ layers, the final node embeddings $\mathbf{h}_v^{(L)}$ capture the structural information in the graph. These embeddings represent each node’s information from its local and higher-order neighbors, capturing both the immediate neighborhood and the broader graph structure. This information is then augmented with traditional graph-based topological features such as the number of common neighbors or the PageRank score of the nodes.
+
+The final embeddings $\mathbf{h}_v^{(L)}$ are used in the fusion module to represent the structural context of each node, which is critical for determining potential links.
+
+
+\subsection{Non-Topological Features Extraction Module}
+
+In this module, non-topological features are extracted from the node attributes, which include characteristics such as node labels, categorical data, or other external information. These features are encoded into numerical vectors, typically using methods like one-hot encoding or embeddings. The non-topological feature vector for a node $v$ is represented as $\mathbf{x}_v$, derived from its attributes:
+
+\begin{equation}
+\mathbf{x}_v = \text{ENCODE}(\text{Attributes of node } v)
+\end{equation}
+
+These feature vectors provide complementary information to the topological features, capturing intrinsic properties of the nodes. Once extracted, these features are normalized or scaled to ensure compatibility with the topological features and are then passed to the fusion module for integration with the graph-based embeddings.
+
+\subsection{Fusion Module}
+
+In the Fusion Module, topological features $\mathbf{h}_u^{(L)}$ and $\mathbf{h}_v^{(L)}$ from the GNN, and non-topological features $\mathbf{x}_u$ and $\mathbf{x}_v$ are concatenated into a single feature vector for link prediction:
+
+\begin{equation}
+\mathbf{f}_{uv} = \left[ \mathbf{h}_u^{(L)}, \mathbf{h}_v^{(L)}, \mathbf{x}_u, \mathbf{x}_v \right]
+\end{equation}
+
+This fused vector $\mathbf{f}_{uv}$ is then input into the Bayesian Network to predict the probability of an edge between nodes $u$ and $v$, leveraging both topological and non-topological information.
+
+\subsection{Link Prediction Module}
+
+In this module, we use a Bayesian Network to predict the probability of a link between nodes $u$ and $v$. The Bayesian Network models the conditional probability $P(y_{uv} \mid \mathbf{f}_{uv})$, where $\mathbf{f}_{uv}$ is the fused feature vector for the node pair $(u, v)$. The Bayesian Network computes the posterior probability using Bayes' Theorem:
+
+\begin{equation}
+P(y_{uv} = 1 \mid \mathbf{f}_{uv}) = \frac{P(\mathbf{f}_{uv} \mid y_{uv} = 1) P(y_{uv} = 1)}{P(\mathbf{f}_{uv})}
+\end{equation}
+
+The Bayesian Network allows for probabilistic reasoning about the presence of edges between node pairs, considering both the topological features (captured by the GNN) and the non-topological features (captured through attribute similarities). The model learns the conditional probability distributions (CPDs) from the data during training, using methods such as Maximum Likelihood Estimation (MLE) or Expectation-Maximization (EM).
+
+This probabilistic approach also enhances interpretability, as the Bayesian Network can compute the contribution of each feature to the prediction, making it easier to understand which features (topological or non-topological) are driving the prediction of links between nodes. Furthermore, the model’s probabilistic nature provides a natural way to quantify uncertainty in the predictions, which can be useful in applications requiring risk assessment or decision-making under uncertainty.
+
+\subsection{Pseudocode Flowchart}
+
+The following pseudocode outlines the key steps in our BGNN framework, which GNN for feature extraction and Bayesian Networks for link prediction.
+
+\begin{algorithm}[!h]
+\caption{Simplified BGNN Framework}
+\begin{algorithmic}[1]
+\STATE \textbf{Input:} Graph $G = (V, E)$, Node attributes $\mathbf{X}$
+\STATE \textbf{Output:} Predicted probabilities $\hat{y}_{uv}$ for node pairs $(u, v)$
+
+\STATE \textbf{// Step 1: Feature Extraction}
+\STATE Extract topological features $\mathbf{h}_v^{(L)}$ using GNN
+\STATE Extract non-topological features $\mathbf{x}_v$ from node attributes
+
+\STATE \textbf{// Step 2: Feature Fusion}
+\STATE Fuse topological and non-topological features: 
+$$\mathbf{f}_{uv} = [\mathbf{h}_u^{(L)}, \mathbf{h}_v^{(L)}, \mathbf{x}_u, \mathbf{x}_v]$$
+
+\STATE \textbf{// Step 3: Link Prediction via Bayesian Network}
+\STATE Compute the probability of link existence: 
+$$\hat{y}_{uv} = P(y_{uv} = 1 \mid \mathbf{f}_{uv})$$
+\end{algorithmic}
+\end{algorithm}
+
+\input{results/result-compare}
+\section{Experiments}
+\label{sec:experiments} 
+
+\subsection{Experimental Setups}
+\subsubsection{Datasets} 
+
+SCHOLAT Link Prediction Dataset \cite{10.1007/978-981-19-4549-6_26} originates from the SCHOLAT open data platform and mainly focuses on the link prediction problem in academic social networks. This dataset comprises 10,755 user nodes and provides 168,540, 16,854, and 16,854 undirected edges for the training, development, and test sets, respectively, while integrating both the users’ social topology and attribute information.
+
+YST Dataset \cite{von2002comparative} is based on the work by von Mering et al. This study compared different large-scale protein–protein interaction (PPI) datasets, with a particular focus on the interaction network in yeast, and revealed the tremendous potential of using integrated protein interaction maps to decipher complex cellular regulatory networks.
+
+\subsubsection{Baselines}
+To comprehensively evaluate our proposed model, we compare it with several benchmark methods, which can be categorized into two types: GNN-based methods, and methods for heterogeneous graphs and meta-paths.
+
+
+\textbf{GNN-based Methods.} These methods learn node representations to capture complex graph structure information for link prediction. We compare \textit{Graph Isomorphism Network} (GIN), \textit{Graph Attention Network} (GAT), \textit{Graph Attention Network v2} (GAT v2), and \textit{Local Attention Graph Convolution Network} (LAGCN), which all leverage different mechanisms, such as isomorphism, attention, and local enhancements.
+
+\textbf{Heterogeneous Graph and Meta-Path-based Methods.} We compare \textit{SELAR}, which uses meta-paths for heterogeneous graph representation learning with attention residuals; \textit{MAGNN}, which aggregates information from different meta-paths using attention; and \textit{MAHGA}, a multi-faceted framework combining structural and meta-path-level enhancements for robust link prediction.
+
+\subsubsection{Implementation Details} 
+In our implementation, we employed a three\-layer GAT network as the node feature extractor. The first GAT layer utilizes 8 attention heads, each with an output dimension of 128, to fully capture local neighborhood information. 
+Subsequently, the second and third layers further aggregate and map the features, resulting in a final node embedding dimension of 64, which ensures both compactness and expressive power. Meanwhile, the initial node attributes are generated using Node2Vec with a dimension of 32, reflecting the latent relationships among nodes in the entire graph. The model is trained using the Adam optimizer with an initial learning rate of 0.001 and a weight decay of 0.0005 to mitigate overfitting; 
+Dropout (with a rate of 0.2) is applied in each layer to enhance generalization. To ensure stability during training, a learning rate scheduler automatically reduces the learning rate if the validation metrics do not show significant improvement for 100 consecutive epochs. The entire model is trained for 1000 epochs, with evaluation on the validation set every 100 epochs, and the model with the best validation performance is ultimately selected for testing.
+
+\subsubsection{Evaluation Metrics}
+We assess link prediction performance using five metrics:
+
+\textbf{Accuracy (Acc)}: Defined as
+\begin{equation}
+    \text{Acc} = \frac{TP + TN}{TP + TN + FP + FN},
+\end{equation}
+accuracy measures the overall proportion of correct predictions. However, in imbalanced networks, it may not fully reflect the model's ability to identify positive links.
+
+\textbf{Area Under Curve (AUC)}: AUC quantifies the model's ability to discriminate between positive and negative samples by measuring the area under the ROC curve, which plots the true positive rate against the false positive rate across thresholds.
+
+\textbf{Precision}: 
+\begin{equation}
+    \text{Precision} = \frac{TP}{TP + FP},
+\end{equation}
+indicates the proportion of correctly predicted positive links among all predicted positives.
+
+\textbf{Recall}: 
+\begin{equation}
+    \text{Recall} = \frac{TP}{TP + FN},
+\end{equation}
+measures the proportion of actual positive links correctly identified.
+
+\textbf{F1-score}: 
+\begin{equation}
+    \text{F1-score} = 2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}},
+\end{equation}
+balances precision and recall, especially in imbalanced settings.
+
+\input{results/result-compare-acc}
+
+
+
+
+\subsection{Comparison Results and Analyses} 
+
+\input{results/result-ablation}
+
+Our proposed BGNN model was evaluated against several baseline models on two datasets, SCHOLAT and YST, with results summarized in Table II. As shown in the table, BGNN achieves the highest Accuracy scores among all baseline methods, demonstrating its strong overall performance in the task of link prediction. Specifically, BGNN achieved an Accuracy of 93\% on the SCHOLAT dataset and 81\% on the YST dataset. This performance significantly outperforms other models, such as GIN, GAT, and LAGCN, which achieved accuracy values ranging from 0.87 to 0.93 on SCHOLAT and from 0.52 to 0.60 on YST. These results indicate that our proposed method excels in correctly identifying both positive and negative links. The higher accuracy achieved on SCHOLAT can be attributed to the more structured nature of the graph, where BGNN is able to leverage both node embeddings and topological information effectively. On YST, the slightly lower accuracy suggests that the graph may have more complex, heterogeneous relationships, but BGNN still manages to achieve a strong performance compared to other models, proving its robustness across different types of data.
+
+In addition to Accuracy, we further evaluated BGNN's performance using four other important metrics: AUC, Precision, Recall, and F1-score. The results, summarized in Table I, reinforce the advantages of the BGNN model. Specifically, BGNN achieved an AUC of 0.96 on SCHOLAT, which is comparable to the top-performing GNN models such as GIN and GAT. The AUC score is crucial as it evaluates the model's ability to distinguish between positive and negative link predictions, and BGNN's high AUC indicates its superior capability in this aspect. This shows that BGNN not only excels in making correct predictions but also in its ability to rank links correctly in terms of likelihood.
+
+Moreover, BGNN outperforms the other models in both Precision and Recall, achieving 0.89 and 0.97, respectively, on the SCHOLAT dataset, and 0.85 and 0.81 on the YST dataset. The Precision score indicates that among the predicted positive links, a high proportion are indeed correct, and BGNN’s high Precision on both datasets suggests that it is highly effective in minimizing false positives. In contrast, the Recall score indicates that BGNN is able to correctly identify a large portion of the actual positive links, particularly excelling in SCHOLAT with a Recall of 0.97, which demonstrates its effectiveness in capturing true links. 
+
+The F1-score, which balances Precision and Recall, further confirms BGNN’s ability to provide high-quality predictions, achieving 0.93 for SCHOLAT and 0.82 for YST. The F1-score is particularly important in imbalanced datasets, as it considers both false positives and false negatives, and BGNN’s high F1-score across both datasets demonstrates its robustness in providing a balanced prediction without overfitting to either false positives or false negatives.
+
+In summary, BGNN not only excels in overall accuracy but also provides high-quality predictions across all performance metrics. These results demonstrate that BGNN is highly reliable and effective in link prediction tasks, providing a strong foundation for its application in various domains that require high prediction quality and interpretability.
+
+
+\subsection{Influence Investigation of GNN}
+
+
+To examine the effectiveness of the GNN encoder used in our proposed framework, we conduct an ablation study by replacing the GNN component while keeping all other modules identical  Specifically, we compare two widely used graph convolutional variants: SAG\cite{DBLP:journals/corr/HamiltonYL17} and GIN\cite{xu2019powerfulgraphneuralnetworks}, against our proposed architecture that employs GAT\cite{velivckovic2017graph, Mythili2023Link}.
+
+SAG efficiently aggregates neighborhood features via mean pooling but may miss detailed node interactions, while GIN employs MLP-based aggregation capable of distinguishing structural variations yet struggles with flexible attribute integration. Our multi-layer GAT encoder, using attention mechanisms, selectively captures nuanced structural and attribute-level interactions effectively.
+
+Table III presents the comparative performance. On the SCHOLAT dataset, while SAG and GIN achieve reasonable AUC scores of 0.90 and 0.87 respectively, our model surpasses them significantly, reaching an AUC of 0.96 and notably higher Recall (0.97) and F1-score (0.93). Similar trends are observed on the more challenging YST dataset, where SAG and GIN exhibit substantial performance degradation, particularly in Recall and F1 metrics. Our GAT-based Bayesian model maintains robust performance, achieving an F1-score of 0.82 and AUC of 0.85. These improvements underscore the superiority of the attention mechanism in effectively capturing node interactions, especially in heterogeneous or noisy environments, and validate the value of the Bayesian integration in handling feature uncertainty comprehensively.
+
+
+
+
+\section{Conclusion and Future Work}
+\label{sec:conclusion} 
+
+In this paper, we introduced BGNN, a novel framework that integrates deep node embeddings from multi-layer GNNs with non-topological features through Bayesian inference. This fusion not only enhances prediction accuracy—demonstrated by superior performance across multiple metrics on benchmark datasets—but also significantly improves interpretability by quantifying the contribution of each feature in predicting link existence. Our comprehensive experiments validate BGNN’s robustness and effectiveness in addressing the challenges of link prediction by capturing both local and global structural information along with rich attribute data.
+
+Looking ahead, future work will extend BGNN to more complex scenarios, such as dynamic and heterogeneous graphs, where evolving network structures and diverse data sources further complicate link prediction tasks. Additionally, we aim to incorporate domain-specific features and refine the interpretability of our probabilistic framework, thereby enhancing decision-making support in critical real-world applications and expanding the utility of our approach across various domains.
+
+\bibliographystyle{IEEEtran}
+\bibliography{ref}
+
+\end{document}
